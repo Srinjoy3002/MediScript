@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediScript – AI-Powered Prescription Builder</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display:ital@0;1&family=MuseoModerno&display=swap"
+        rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        /* (All CSS remains exactly as in the previous working version) */
+        :root {
+            --bg: #f0f4f9;
+            --surface: #ffffff;
+            --surface2: #f7f9fc;
+            --border: #dde3ee;
+            --text: #1a2236;
+            --text-muted: #6b7a9a;
+            --accent: #2563eb;
+            --accent-light: #dbeafe;
+            --accent-dark: #1d4ed8;
+            --success: #10b981;
+            --success-light: #d1fae5;
+            --danger: #ef4444;
+            --danger-light: #fee2e2;
+            --warning: #f59e0b;
+            --warning-light: #fef3c7;
+            --shadow: 0 2px 12px rgba(30, 50, 100, 0.08);
+            --shadow-lg: 0 8px 32px rgba(30, 50, 100, 0.13);
+            --radius: 14px;
+            --radius-sm: 8px;
+            --transition: 0.22s cubic-bezier(.4, 0, .2, 1);
+        }
+
+        body.dark {
+            --bg: #0f1724;
+            --surface: #1a2236;
+            --surface2: #212d42;
+            --border: #2d3d5a;
+            --text: #e8edf7;
+            --text-muted: #7a8eb5;
+            --accent: #3b82f6;
+            --accent-light: #1e3a6e;
+            --success-light: #064e3b;
+            --danger-light: #450a0a;
+            --warning-light: #422006;
+            --shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+            --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.45);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 20px;
+            transition: background var(--transition), color var(--transition);
+        }
+
+        .container {
+            max-width: 1420px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 22px 32px;
+            margin-bottom: 28px;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 14px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .logo-icon {
+            width: 52px;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .logo-text h1 {
+            font-family: 'MuseoModerno', serif;
+            font-size: 1.9rem;
+            color: var(--text);
+        }
+
+        .logo-text h1 span {
+            color: var(--accent);
+        }
+
+        .logo-text p {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+
+        #darkToggle {
+            position: fixed;
+            top: 22px;
+            right: 22px;
+            z-index: 9999;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--surface);
+            border: 2px solid var(--border);
+            color: var(--text);
+            font-size: 1.1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow-lg);
+        }
+
+        main {
+            display: grid;
+            grid-template-columns: 1fr 1.25fr;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        @media (max-width: 1050px) {
+            main {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 24px;
+            margin-bottom: 22px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        .card-title {
+            font-size: 1.05rem;
+            font-weight: 600;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+        }
+
+        .card-title i {
+            color: var(--accent);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group.full {
+            grid-column: 1/-1;
+        }
+
+        label {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        input,
+        select,
+        textarea {
+            padding: 10px 14px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-family: 'DM Sans', sans-serif;
+            color: var(--text);
+            background: var(--surface2);
+            width: 100%;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .name-row {
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+        }
+
+        #micBtn {
+            flex-shrink: 0;
+            width: 42px;
+            height: 42px;
+            background: var(--accent-light);
+            border: 2px solid var(--accent);
+            color: var(--accent);
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #micBtn.listening {
+            background: var(--danger);
+            border-color: var(--danger);
+            color: white;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.6;
+            }
+        }
+
+        .med-input-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        #addMedicineBtn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .quick-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .quick-btn {
+            background: var(--accent-light);
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            border-radius: 20px;
+            padding: 5px 14px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .test-selector {
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+
+        .test-dropdown {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 12px;
+        }
+
+        .test-suggestions {
+            background: var(--surface2);
+            border-radius: 8px;
+            padding: 12px;
+            margin: 8px 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .test-suggestions label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            text-transform: none;
+            font-weight: normal;
+            cursor: pointer;
+        }
+
+        .add-tests-btn {
+            background: var(--success);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            margin-top: 8px;
+        }
+
+        .investigations-list {
+            margin-top: 12px;
+        }
+
+        .investigation-item {
+            background: var(--accent-light);
+            border-radius: 20px;
+            padding: 4px 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin: 4px 6px 4px 0;
+            font-size: 0.85rem;
+        }
+
+        .remove-investigation {
+            background: none;
+            border: none;
+            color: var(--danger);
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .med-list {
+            min-height: 160px;
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 16px;
+        }
+
+        .empty-msg {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 36px 16px;
+            font-style: italic;
+        }
+
+        .med-item {
+            background: var(--surface2);
+            border-radius: 8px;
+            padding: 13px 14px;
+            margin-bottom: 12px;
+            border-left: 4px solid var(--accent);
+        }
+
+        .med-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .med-remove {
+            background: var(--danger);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            width: 28px;
+            height: 28px;
+            cursor: pointer;
+        }
+
+        .med-controls {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 8px;
+        }
+
+        .med-controls select {
+            padding: 6px 9px;
+            font-size: 0.85rem;
+            flex: 1 1 110px;
+        }
+
+        .prescription-preview {
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            padding: 24px;
+            min-height: 380px;
+            margin-bottom: 20px;
+            font-family: 'Times New Roman', Georgia, serif;
+            color: #111;
+        }
+
+        body.dark .prescription-preview {
+            background: #1e2a42;
+            color: #e0e6f5;
+        }
+
+        .prescription-header {
+            text-align: center;
+            border-bottom: 3px double;
+            padding-bottom: 16px;
+            margin-bottom: 22px;
+        }
+
+        .clinic-name {
+            font-size: 1.7rem;
+            font-weight: 700;
+            color: #1e40af;
+        }
+
+        body.dark .clinic-name {
+            color: #60a5fa;
+        }
+
+        .patient-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 22px;
+            font-size: 0.92rem;
+        }
+
+        .medicines-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 18px 0;
+            font-size: 0.88rem;
+        }
+
+        .medicines-table th,
+        .medicines-table td {
+            border: 1px solid #ccc;
+            padding: 9px;
+            text-align: left;
+        }
+
+        .prescription-footer {
+            margin-top: 36px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 11px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1 1 130px;
+            justify-content: center;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        #toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 99999;
+        }
+
+        .toast {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-top: 8px;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 32px;
+            text-align: center;
+        }
+
+        footer {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 18px 24px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+                margin: 0;
+            }
+
+            header,
+            footer,
+            #darkToggle,
+            #toast-container,
+            .left-panel,
+            .action-buttons,
+            .card-title,
+            .quick-actions,
+            .med-input-row,
+            .test-selector,
+            .btn,
+            .modal-overlay {
+                display: none !important;
+            }
+
+            .right-panel {
+                display: block;
+                width: 100%;
+                margin: 0;
+                padding: 0;
+            }
+
+            .card {
+                box-shadow: none;
+                border: none;
+                padding: 0;
+                margin: 0;
+                background: white;
+            }
+
+            .prescription-preview {
+                border: none;
+                padding: 0;
+                margin: 0;
+                background: white;
+                color: black;
+            }
+
+            body.dark .prescription-preview {
+                background: white;
+                color: black;
+            }
+
+            .clinic-name {
+                color: #1e40af !important;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .med-controls {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <button id="darkToggle"><i class="fas fa-moon"></i></button>
+    <div id="toast-container"></div>
+
+    <div class="container">
+        <header>
+            <div class="logo">
+                <div class="logo-icon"><img src="logo.png" alt="MediScript logo"></div>
+                <div class="logo-text">
+                    <h1>Medi<span>Script</span></h1>
+                    <p>AI-Powered Clinical Documentation Platform</p>
+                </div>
+            </div>
+            <div><span class="ai-badge">✦ Gemini AI</span></div>
+        </header>
+
+        <main>
+            <!-- LEFT PANEL -->
+            <div class="left-panel">
+                <div class="card">
+                    <div class="card-title"><i class="fas fa-pills"></i> Add Medicines</div>
+                    <div class="med-input-row">
+                        <input type="text" id="medicineNameInput" list="medicineSuggestions"
+                            placeholder="Type medicine or symptom…">
+                        <datalist id="medicineSuggestions"></datalist>
+                        <button id="addMedicineBtn"><i class="fas fa-plus"></i> Add</button>
+                    </div>
+                    <div class="quick-actions">
+                        <button class="quick-btn" data-medicine="Paracetamol 500mg">Paracetamol</button>
+                        <button class="quick-btn" data-medicine="Amoxicillin 500mg">Amoxicillin</button>
+                        <button class="quick-btn" data-medicine="Cetirizine 10mg">Cetirizine</button>
+                        <button class="quick-btn" data-medicine="Metformin 500mg">Metformin</button>
+                    </div>
+                    <div class="med-list" id="selectedMedicines">
+                        <p class="empty-msg">No medicines added yet.</p>
+                    </div>
+
+                    <!-- TEST SECTION -->
+                    <div class="test-selector">
+                        <div class="card-title"><i class="fas fa-flask"></i> Investigations / Tests</div>
+                        <select id="testCategory" class="test-dropdown">
+                            <option value="">-- Select Test Type --</option>
+                            <option value="blood">Blood Test</option>
+                            <option value="xray">X-Ray</option>
+                            <option value="ct">CT Scan</option>
+                            <option value="mri">MRI</option>
+                            <option value="usg">USG (Ultrasound)</option>
+                            <option value="eet">EET (Exercise Tolerance Test)</option>
+                            <option value="endoscopy">Endoscopy</option>
+                            <option value="ecg">ECG</option>
+                            <option value="urinalysis">Urinalysis</option>
+                        </select>
+                        <div id="testSuggestionsContainer" class="test-suggestions" style="display: none;"></div>
+                        <button id="addSelectedTestsBtn" class="add-tests-btn" style="display: none;">➕ Add Selected
+                            Tests</button>
+                        <div id="investigationsList" class="investigations-list"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT PANEL -->
+            <div class="right-panel">
+                <div class="card">
+                    <div class="card-title"><i class="fas fa-user-md"></i> Patient Details</div>
+                    <div class="form-grid">
+                        <div class="form-group full">
+                            <label>Patient Name</label>
+                            <div class="name-row">
+                                <input type="text" id="patientName" placeholder="John Doe">
+                                <button id="micBtn"><i class="fas fa-microphone"></i></button>
+                            </div>
+                        </div>
+                        <div class="form-group"><label>Age</label><input type="number" id="patientAge"></div>
+                        <div class="form-group"><label>Gender</label>
+                            <select id="patientGender">
+                                <option value="">Select</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group full"><label>Diagnosis</label><textarea id="diagnosis"
+                                rows="2"></textarea></div>
+                        <div class="form-group full"><label>Allergies</label><input type="text" id="allergies"
+                                placeholder="e.g., Penicillin"></div>
+                        <div class="form-group"><label>Consultation Date</label><input type="date" id="consultDate">
+                        </div>
+                        <div class="form-group"><label>Follow-up Date</label><input type="date" id="followUpDate"></div>
+                        <div class="form-group full"><label>Additional Instructions</label><textarea id="doctorNotes"
+                                rows="2"></textarea></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title"><i class="fas fa-file-prescription"></i> Prescription Preview</div>
+                    <div class="prescription-preview" id="prescriptionPreview">
+                        <div class="preview-placeholder">Fill details to see preview</div>
+                    </div>
+                    <div class="action-buttons">
+                        <button id="generatePdfBtn" class="btn btn-primary"><i class="fas fa-download"></i> PDF</button>
+                        <button id="printBtn" class="btn btn-primary"><i class="fas fa-print"></i> Print</button>
+                        <button id="exportFhirBtn" class="btn btn-success"><i class="fas fa-file-code"></i>
+                            FHIR</button>
+                        <button id="shareQrBtn" class="btn btn-success"><i class="fas fa-qrcode"></i> QR</button>
+                        <button id="clearAllBtn" class="btn btn-danger"><i class="fas fa-trash"></i> Clear</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+        <footer>MediScript © 2025 — AI-Assisted Clinical Documentation</footer>
+    </div>
+
+    <div id="qrModal" class="modal-overlay" style="display:none;">
+        <div class="modal">
+            <h3>QR Code</h3>
+            <img id="qrImg" src="" width="150">
+            <p id="qrUrl"></p>
+            <button onclick="document.getElementById('qrModal').style.display='none'">Close</button>
+        </div>
+    </div>
+
+    <script>
+        // ========== CONFIG ==========
+        const GEMINI_API_KEY = ""; // Replace with your key
+        const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+        let state = { selectedMedicines: [], investigations: [] };
+        const testMap = {
+            blood: ["CBC (Complete Blood Count)", "HDL/LDL (Lipid Profile)", "Metabolic Panel (BMP/CMP)", "HbA1c", "Thyroid Function Tests (TFTs)"],
+            xray: ["Chest X-Ray", "Abdominal X-Ray", "Limb X-Ray"],
+            ct: ["CT Head", "CT Chest", "CT Abdomen", "CT Spine"],
+            mri: ["MRI Brain", "MRI Knee", "MRI Spine"],
+            usg: ["USG Abdomen", "USG Pelvis", "USG Thyroid"],
+            eet: ["Treadmill Test (TMT)", "Stress Echocardiography"],
+            endoscopy: ["Upper GI Endoscopy", "Colonoscopy"],
+            ecg: ["12-Lead ECG", "Holter Monitoring"],
+            urinalysis: ["Urine Routine", "Urine Culture", "Microscopic Exam"]
+        };
+
+        const el = {
+            medicineNameInput: document.getElementById('medicineNameInput'),
+            medicineSuggestions: document.getElementById('medicineSuggestions'),
+            addMedicineBtn: document.getElementById('addMedicineBtn'),
+            selectedMedicines: document.getElementById('selectedMedicines'),
+            patientName: document.getElementById('patientName'),
+            patientAge: document.getElementById('patientAge'),
+            patientGender: document.getElementById('patientGender'),
+            diagnosis: document.getElementById('diagnosis'),
+            allergies: document.getElementById('allergies'),
+            consultDate: document.getElementById('consultDate'),
+            followUpDate: document.getElementById('followUpDate'),
+            doctorNotes: document.getElementById('doctorNotes'),
+            prescriptionPreview: document.getElementById('prescriptionPreview'),
+            generatePdfBtn: document.getElementById('generatePdfBtn'),
+            printBtn: document.getElementById('printBtn'),
+            exportFhirBtn: document.getElementById('exportFhirBtn'),
+            shareQrBtn: document.getElementById('shareQrBtn'),
+            clearAllBtn: document.getElementById('clearAllBtn'),
+            micBtn: document.getElementById('micBtn'),
+            darkToggle: document.getElementById('darkToggle'),
+            testCategory: document.getElementById('testCategory'),
+            testSuggestionsContainer: document.getElementById('testSuggestionsContainer'),
+            addSelectedTestsBtn: document.getElementById('addSelectedTestsBtn'),
+            investigationsList: document.getElementById('investigationsList')
+        };
+
+        function showToast(type, title, msg, duration = 3000) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'}"></i><div><strong>${title}</strong><br>${msg}</div>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), duration);
+        }
+
+        async function callGemini(prompt) {
+            try {
+                const res = await fetch(GEMINI_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+                const data = await res.json();
+                return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            } catch (e) {
+                return '';
+            }
+        }
+
+        // ========== TESTS ==========
+        function renderTestSuggestions() {
+            const category = el.testCategory.value;
+            if (!category || !testMap[category]) {
+                el.testSuggestionsContainer.style.display = 'none';
+                el.addSelectedTestsBtn.style.display = 'none';
+                return;
+            }
+            const tests = testMap[category];
+            el.testSuggestionsContainer.innerHTML = tests.map(test => `
+                <label><input type="checkbox" value="${test}"> ${test}</label>
+            `).join('');
+            el.testSuggestionsContainer.style.display = 'flex';
+            el.addSelectedTestsBtn.style.display = 'block';
+        }
+
+        function addSelectedTests() {
+            const checkboxes = el.testSuggestionsContainer.querySelectorAll('input[type="checkbox"]:checked');
+            if (checkboxes.length === 0) {
+                showToast('warning', 'No tests selected', 'Please check at least one test.');
+                return;
+            }
+            checkboxes.forEach(cb => {
+                const testName = cb.value;
+                if (!state.investigations.includes(testName)) {
+                    state.investigations.push(testName);
+                }
+            });
+            renderInvestigationsList();
+            updatePreview();
+            showToast('success', 'Tests Added', `${checkboxes.length} investigation(s) added.`);
+            checkboxes.forEach(cb => cb.checked = false);
+        }
+
+        function renderInvestigationsList() {
+            if (state.investigations.length === 0) {
+                el.investigationsList.innerHTML = '<p class="empty-msg" style="padding:8px;">No tests ordered yet.</p>';
+                return;
+            }
+            el.investigationsList.innerHTML = state.investigations.map((inv, idx) => `
+                <div class="investigation-item">
+                    ${inv}
+                    <button class="remove-investigation" data-idx="${idx}"><i class="fas fa-times-circle"></i></button>
+                </div>
+            `).join('');
+            document.querySelectorAll('.remove-investigation').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const idx = parseInt(btn.dataset.idx);
+                    state.investigations.splice(idx, 1);
+                    renderInvestigationsList();
+                    updatePreview();
+                });
+            });
+        }
+
+        // ========== MEDICINES ==========
+        function addMedicine(name, dosage = '1 tab', frequency = 'BD', duration = '5 days', timing = 'PC', instructions = 'As directed') {
+            if (!name.trim()) return;
+            const med = { id: Date.now(), name, dosage, frequency, duration, timing, instructions };
+            state.selectedMedicines.push(med);
+            updateMedicinesDisplay();
+            updatePreview();
+        }
+
+        function removeMedicine(idx) {
+            state.selectedMedicines.splice(idx, 1);
+            updateMedicinesDisplay();
+            updatePreview();
+        }
+
+        function updateMedicineField(idx, field, value) {
+            state.selectedMedicines[idx][field] = value;
+            updatePreview();
+        }
+
+        function updateMedicinesDisplay() {
+            if (!state.selectedMedicines.length) {
+                el.selectedMedicines.innerHTML = '<p class="empty-msg">No medicines added.</p>';
+                return;
+            }
+            el.selectedMedicines.innerHTML = state.selectedMedicines.map((med, idx) => `
+                <div class="med-item">
+                    <div class="med-header">
+                        <span class="med-name">${med.name}</span>
+                        <button class="med-remove" data-idx="${idx}"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="med-controls">
+                        <select class="dosage-sel" data-idx="${idx}">${['1/2 tab', '1 tab', '2 tabs', '1 capsule', '2 capsules', '1 spoon', '5ml', '10ml'].map(o => `<option ${med.dosage === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
+                        <select class="freq-sel" data-idx="${idx}">${['OD', 'BD', 'TDS', 'QID', 'SOS'].map(o => `<option ${med.frequency === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
+                        <select class="dur-sel" data-idx="${idx}">${['3 days', '5 days', '7 days', '10 days', '14 days', '1 month'].map(o => `<option ${med.duration === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
+                        <select class="timing-sel" data-idx="${idx}">${['AC', 'PC', 'Ad lib', 'OM', 'HS'].map(o => `<option ${med.timing === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
+                    </div>
+                    <div><input type="text" class="note-inp" data-idx="${idx}" value="${med.instructions}" placeholder="Instructions"></div>
+                </div>
+            `).join('');
+            document.querySelectorAll('.med-remove').forEach(btn => btn.addEventListener('click', (e) => removeMedicine(parseInt(btn.dataset.idx))));
+            document.querySelectorAll('.dosage-sel').forEach(s => s.addEventListener('change', (e) => updateMedicineField(parseInt(s.dataset.idx), 'dosage', s.value)));
+            document.querySelectorAll('.freq-sel').forEach(s => s.addEventListener('change', (e) => updateMedicineField(parseInt(s.dataset.idx), 'frequency', s.value)));
+            document.querySelectorAll('.dur-sel').forEach(s => s.addEventListener('change', (e) => updateMedicineField(parseInt(s.dataset.idx), 'duration', s.value)));
+            document.querySelectorAll('.timing-sel').forEach(s => s.addEventListener('change', (e) => updateMedicineField(parseInt(s.dataset.idx), 'timing', s.value)));
+            document.querySelectorAll('.note-inp').forEach(inp => inp.addEventListener('input', (e) => updateMedicineField(parseInt(inp.dataset.idx), 'instructions', inp.value)));
+        }
+
+        // ========== PREVIEW (same as before) ==========
+        function updatePreview() {
+            const patientName = el.patientName.value.trim() || '—';
+            const age = el.patientAge.value || '—';
+            const gender = el.patientGender.value || '—';
+            const consultDate = el.consultDate.value || '—';
+            const followUpDate = el.followUpDate.value || '—';
+            const diagnosis = el.diagnosis.value.trim();
+            const allergies = el.allergies.value.trim();
+            const doctorNotes = el.doctorNotes.value.trim();
+
+            let html = `
+                <div class="prescription-header">
+                    <div class="clinic-name">HEALTHCARE CLINIC</div>
+                    <p>123 Medical Street, Health City | Phone: (123) 456-7890</p>
+                </div>
+                <div class="patient-details">
+                    <div><strong>Patient Name:</strong> ${patientName}</div>
+                    <div><strong>Age/Gender:</strong> ${age} ${gender !== '—' ? `(${gender})` : ''}</div>
+                    <div><strong>Consultation Date:</strong> ${consultDate}</div>
+                    <div><strong>Follow-up Date:</strong> ${followUpDate}</div>
+                </div>
+            `;
+            if (diagnosis) html += `<div><strong>Diagnosis:</strong> ${diagnosis}</div>`;
+            if (allergies) html += `<div><strong>Allergies:</strong> ${allergies}</div>`;
+
+            if (state.selectedMedicines.length) {
+                html += `<table class="medicines-table"><thead><tr><th>Medicine</th><th>Dosage</th><th>Frequency</th><th>Duration</th><th>Instructions</th></tr></thead><tbody>
+                        ${state.selectedMedicines.map(m => `<tr><td>${m.name}</td><td>${m.dosage}</td><td>${m.frequency}</td><td>${m.duration}</td><td>${m.instructions} (${m.timing})</td>`).join('')}
+                        </tbody></table>`;
+            }
+
+            if (state.investigations.length) {
+                html += `<div style="margin-top:16px;"><strong>Investigations Ordered:</strong><ul style="margin-left:20px;">${state.investigations.map(i => `<li>${i}</li>`).join('')}</ul></div>`;
+            }
+
+            if (doctorNotes) html += `<div><strong>Additional Notes:</strong> ${doctorNotes}</div>`;
+            html += `<div class="prescription-footer"><div><strong>Dr. John Smith</strong><br>MBBS, MD</div><div>Date: ${new Date().toLocaleDateString()}</div></div>`;
+            el.prescriptionPreview.innerHTML = html;
+        }
+
+        // ========== PDF GENERATION (FULL PRESCRIPTION) ==========
+        function generatePDF() {
+            if (typeof window.jspdf === 'undefined') {
+                showToast('error', 'PDF Error', 'jsPDF not loaded.');
+                return;
+            }
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            let y = 20;
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const margin = 20;
+            const maxWidth = pageWidth - 2 * margin;
+
+            // Helper to add wrapped text
+            function addText(text, x, y, options = {}) {
+                const lines = doc.splitTextToSize(text, maxWidth);
+                doc.text(lines, x, y, options);
+                return y + (lines.length * 7);
+            }
+
+            // Clinic Header
+            doc.setFontSize(18);
+            doc.setTextColor(30, 64, 175);
+            doc.text("HEALTHCARE CLINIC", pageWidth / 2, y, { align: "center" });
+            y += 10;
+            doc.setFontSize(10);
+            doc.setTextColor(0, 0, 0);
+            doc.text("123 Medical Street, Health City | Phone: (123) 456-7890", pageWidth / 2, y, { align: "center" });
+            y += 8;
+            doc.text("Email: contact@healthcareclinic.com | License: MED123456", pageWidth / 2, y, { align: "center" });
+            y += 12;
+            doc.line(margin, y, pageWidth - margin, y);
+            y += 8;
+
+            // Patient Details
+            doc.setFontSize(12);
+            doc.setFont("helvetica", "bold");
+            doc.text("PATIENT INFORMATION", margin, y);
+            y += 8;
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            const patientName = el.patientName.value.trim() || "Not specified";
+            const age = el.patientAge.value || "N/A";
+            const gender = el.patientGender.value || "N/A";
+            const consultDate = el.consultDate.value || "N/A";
+            const followUp = el.followUpDate.value || "N/A";
+            doc.text(`Patient Name: ${patientName}`, margin, y);
+            doc.text(`Age/Gender: ${age} (${gender})`, margin + 100, y);
+            y += 7;
+            doc.text(`Consultation Date: ${consultDate}`, margin, y);
+            doc.text(`Follow-up Date: ${followUp}`, margin + 100, y);
+            y += 10;
+
+            // Diagnosis
+            const diagnosis = el.diagnosis.value.trim();
+            if (diagnosis) {
+                doc.setFont("helvetica", "bold");
+                doc.text("DIAGNOSIS:", margin, y);
+                y += 6;
+                doc.setFont("helvetica", "normal");
+                y = addText(diagnosis, margin, y);
+                y += 6;
+            }
+
+            // Allergies
+            const allergies = el.allergies.value.trim();
+            if (allergies) {
+                doc.setFont("helvetica", "bold");
+                doc.text("ALLERGIES:", margin, y);
+                y += 6;
+                doc.setFont("helvetica", "normal");
+                y = addText(allergies, margin, y);
+                y += 6;
+            }
+
+            // Medicines Table
+            if (state.selectedMedicines.length > 0) {
+                doc.setFont("helvetica", "bold");
+                doc.text("PRESCRIBED MEDICINES:", margin, y);
+                y += 8;
+                // Table headers
+                doc.setFillColor(240, 240, 240);
+                doc.rect(margin, y, maxWidth, 10, 'F');
+                doc.setFontSize(9);
+                doc.setFont("helvetica", "bold");
+                doc.text("Medicine", margin + 2, y + 7);
+                doc.text("Dosage", margin + 50, y + 7);
+                doc.text("Freq", margin + 85, y + 7);
+                doc.text("Duration", margin + 110, y + 7);
+                doc.text("Instructions", margin + 145, y + 7);
+                y += 10;
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(9);
+                for (const med of state.selectedMedicines) {
+                    if (y > 270) {
+                        doc.addPage();
+                        y = 20;
+                    }
+                    doc.text(med.name, margin + 2, y + 4);
+                    doc.text(med.dosage, margin + 50, y + 4);
+                    doc.text(med.frequency, margin + 85, y + 4);
+                    doc.text(med.duration, margin + 110, y + 4);
+                    const instr = `${med.instructions} (${med.timing})`;
+                    const lines = doc.splitTextToSize(instr, 45);
+                    doc.text(lines, margin + 145, y + 4);
+                    y += Math.max(1, lines.length) * 5 + 3;
+                }
+                y += 6;
+            }
+
+            // Investigations
+            if (state.investigations.length > 0) {
+                doc.setFont("helvetica", "bold");
+                doc.text("INVESTIGATIONS ORDERED:", margin, y);
+                y += 7;
+                doc.setFont("helvetica", "normal");
+                for (const inv of state.investigations) {
+                    if (y > 280) {
+                        doc.addPage();
+                        y = 20;
+                    }
+                    doc.text(`• ${inv}`, margin + 5, y);
+                    y += 6;
+                }
+                y += 4;
+            }
+
+            // Additional Notes
+            const notes = el.doctorNotes.value.trim();
+            if (notes) {
+                doc.setFont("helvetica", "bold");
+                doc.text("ADDITIONAL INSTRUCTIONS:", margin, y);
+                y += 6;
+                doc.setFont("helvetica", "normal");
+                y = addText(notes, margin, y);
+                y += 6;
+            }
+
+            // Footer / Signature
+            if (y > 270) {
+                doc.addPage();
+                y = 20;
+            }
+            doc.line(margin, y, pageWidth - margin, y);
+            y += 8;
+            doc.setFontSize(10);
+            doc.text("Dr. John Smith", margin, y);
+            doc.text("MBBS, MD (Medicine)", margin, y + 5);
+            doc.text("Reg No: MED123456", margin, y + 10);
+            doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - margin - 40, y + 10);
+
+            // Save PDF
+            const fileName = `prescription_${patientName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+            doc.save(fileName);
+            showToast('success', 'PDF Generated', 'Full prescription downloaded.');
+        }
+
+        // ========== OTHER FUNCTIONS (FHIR, QR, Clear, Voice, etc.) ==========
+        function exportFHIR() {
+            const bundle = {
+                resourceType: "Bundle",
+                type: "collection",
+                entry: [
+                    { resource: { resourceType: "Patient", name: [{ text: el.patientName.value || 'Unknown' }], gender: el.patientGender.value.toLowerCase() } },
+                    ...state.selectedMedicines.map(m => ({ resource: { resourceType: "MedicationRequest", medicationCodeableConcept: { text: m.name }, dosageInstruction: [{ text: `${m.dosage} ${m.frequency}` }] } })),
+                    ...state.investigations.map(i => ({ resource: { resourceType: "ServiceRequest", code: { text: i }, intent: "order" } }))
+                ]
+            };
+            const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `prescription_${Date.now()}.fhir.json`;
+            a.click();
+            showToast('success', 'FHIR Exported', 'Bundle includes medicines + tests');
+        }
+
+        function shareQR() {
+            const url = `https://mediscript.demo/${Date.now()}`;
+            document.getElementById('qrImg').src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(url)}`;
+            document.getElementById('qrUrl').innerText = url;
+            document.getElementById('qrModal').style.display = 'flex';
+        }
+
+        function clearAll() {
+            if (confirm('Clear all data?')) {
+                state.selectedMedicines = [];
+                state.investigations = [];
+                updateMedicinesDisplay();
+                renderInvestigationsList();
+                el.patientName.value = '';
+                el.patientAge.value = '';
+                el.patientGender.value = '';
+                el.diagnosis.value = '';
+                el.allergies.value = '';
+                el.doctorNotes.value = '';
+                const today = new Date().toISOString().split('T')[0];
+                el.consultDate.value = today;
+                const next = new Date(); next.setDate(next.getDate() + 7);
+                el.followUpDate.value = next.toISOString().split('T')[0];
+                updatePreview();
+                showToast('info', 'Cleared', 'All data reset.');
+            }
+        }
+
+        // Voice & Autocomplete (unchanged)
+        function setupVoice() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                el.micBtn.style.opacity = '0.5';
+                return;
+            }
+            const recognition = new SpeechRecognition();
+            el.micBtn.onclick = () => recognition.start();
+            recognition.onresult = async (e) => {
+                const text = e.results[0][0].transcript;
+                showToast('info', 'Processing', text);
+                const prompt = `Extract: patientName, age, gender, diagnosis, medicines (name,dosage,frequency,duration). JSON only. Text: "${text}"`;
+                try {
+                    const raw = await callGemini(prompt);
+                    const data = JSON.parse(raw.replace(/```json|```/g, ''));
+                    if (data.patientName) el.patientName.value = data.patientName;
+                    if (data.age) el.patientAge.value = data.age;
+                    if (data.gender) el.patientGender.value = data.gender;
+                    if (data.diagnosis) el.diagnosis.value = data.diagnosis;
+                    if (data.medicines) data.medicines.forEach(m => addMedicine(m.name, m.dosage, m.frequency, m.duration));
+                    updatePreview();
+                    showToast('success', 'Voice filled', 'Prescription data added.');
+                } catch (err) { showToast('error', 'Error', 'Could not parse'); }
+            };
+        }
+
+        function setupAutocomplete() {
+            let timer;
+            el.medicineNameInput.addEventListener('input', async () => {
+                clearTimeout(timer);
+                const q = el.medicineNameInput.value.trim();
+                if (q.length < 2) return;
+                timer = setTimeout(async () => {
+                    const prompt = `Suggest 5 medicines for "${q}". Return JSON array of strings.`;
+                    const raw = await callGemini(prompt);
+                    try {
+                        const arr = JSON.parse(raw.replace(/```json|```/g, ''));
+                        el.medicineSuggestions.innerHTML = '';
+                        if (Array.isArray(arr)) arr.forEach(s => { let opt = document.createElement('option'); opt.value = s; el.medicineSuggestions.appendChild(opt); });
+                    } catch (e) { }
+                }, 500);
+            });
+        }
+
+        // ========== INIT ==========
+        function init() {
+            const today = new Date().toISOString().split('T')[0];
+            el.consultDate.value = today;
+            const next = new Date(); next.setDate(next.getDate() + 7);
+            el.followUpDate.value = next.toISOString().split('T')[0];
+
+            el.addMedicineBtn.addEventListener('click', () => { addMedicine(el.medicineNameInput.value); el.medicineNameInput.value = ''; });
+            document.querySelectorAll('.quick-btn').forEach(btn => btn.addEventListener('click', () => addMedicine(btn.dataset.medicine)));
+
+            // Patient details listeners
+            el.patientName.addEventListener('input', updatePreview);
+            el.patientAge.addEventListener('input', updatePreview);
+            el.patientGender.addEventListener('change', updatePreview);
+            el.diagnosis.addEventListener('input', updatePreview);
+            el.allergies.addEventListener('input', updatePreview);
+            el.consultDate.addEventListener('change', updatePreview);
+            el.followUpDate.addEventListener('change', updatePreview);
+            el.doctorNotes.addEventListener('input', updatePreview);
+
+            el.clearAllBtn.addEventListener('click', clearAll);
+            el.generatePdfBtn.addEventListener('click', generatePDF);
+            el.printBtn.addEventListener('click', () => window.print());
+            el.exportFhirBtn.addEventListener('click', exportFHIR);
+            el.shareQrBtn.addEventListener('click', shareQR);
+            el.testCategory.addEventListener('change', renderTestSuggestions);
+            el.addSelectedTestsBtn.addEventListener('click', addSelectedTests);
+
+            setupVoice();
+            setupAutocomplete();
+
+            el.darkToggle.addEventListener('click', () => {
+                document.body.classList.toggle('dark');
+                localStorage.setItem('dark', document.body.classList.contains('dark'));
+            });
+            if (localStorage.getItem('dark') === 'true') document.body.classList.add('dark');
+
+            updatePreview();
+            renderInvestigationsList();
+        }
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+
+</html>
